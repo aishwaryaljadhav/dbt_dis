@@ -1,55 +1,229 @@
-/* Storyline content for the booth page.
-   Edit this file to change industries, use cases and demo steps.
-   ROWS order = cube faces: 0 front, 1 right, 2 top (rot = [rotateX, rotateY] that shows the face). */
+/*
+ * dbt_dis content.
+ * Everything a booth host might want to change lives here: event details,
+ * technology names, summit stages, industry icons and the six storylines.
+ * Company names, people and figures are illustrative.
+ */
+window.DIS = (function () {
+  // Event start and end in UTC (Dubai is UTC+4). 09:00 Dubai on 14 Oct = 05:00 UTC.
+  const EVENT = {
+    name: "Data Innovation Summit MEA 2026",
+    dates: "14–15 October 2026",
+    venue: "JW Marriott Hotel Marina, Dubai",
+    start: "2026-10-14T05:00:00Z",
+    end: "2026-10-15T14:00:00Z",
+    booth: "Diggibyte booth, exhibition area"
+  };
 
-const N='var(--navy)',R='#E31B23';
-const ICONS=[
- `<svg viewBox="0 0 64 64" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 56V32l12 7v-7l12 7v-7l12 7V12h8v44z" style="stroke:${N}"/><path d="M4 56h56" style="stroke:${N}"/><rect x="11" y="45" width="6" height="5" stroke="${R}"/><rect x="23" y="45" width="6" height="5" stroke="${R}"/><rect x="35" y="45" width="6" height="5" stroke="${R}"/><path d="M48 6c2-2 4-2 6 0" stroke="${R}"/></svg>`,
- `<svg viewBox="0 0 64 64" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 26v30h44V26" style="stroke:${N}"/><path d="M8 14h48l4 10H4z" style="stroke:${N}"/><path d="M4 24c0 3 2.7 5 6 5s6-2 6-5c0 3 2.7 5 6 5s6-2 6-5c0 3 2.7 5 6 5s6-2 6-5c0 3 2.7 5 6 5s6-2 6-5" stroke="${R}"/><path d="M18 56V40h10v16" style="stroke:${N}"/><rect x="34" y="38" width="14" height="10" rx="1" style="stroke:${N}"/><path d="M4 56h56" style="stroke:${N}"/></svg>`,
- `<svg viewBox="0 0 64 64" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M32 4 22 58M32 4l10 54" style="stroke:${N}"/><path d="M12 16h40M16 26h32" style="stroke:${N}"/><path d="M27 26l10 12M37 26 27 38M25 38h14M24 44l16 14M40 44 24 58" style="stroke:${N}"/><path d="M12 16v4M52 16v4M16 26v4M48 26v4" stroke="${R}"/><path d="M4 20c4 3 6 3 8 0M52 20c2 3 4 3 8 0" stroke="${R}"/></svg>`
-];
-const APPS=`<svg viewBox="0 0 24 24" fill="none" stroke="#E31B23" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="19" height="17" rx="2"/><path d="M2.5 8h19"/><rect x="5.5" y="11" width="5.5" height="6.5" rx=".6"/><path d="M13.5 11.5h5M13.5 14.5h5M13.5 17.5h3"/></svg>`;
-const TECH=[
- {n:"Genie + Ontology",tag:"Query data in natural language",logo:`<img src="assets/icons/genie.svg" alt="">`},
- {n:"Lakebase",tag:"Bridge analytics and operations",logo:`<img src="assets/icons/lakebase.png" alt="">`},
- {n:"Databricks Apps",tag:"Turn insight into action",logo:APPS}
-];
-const ROWS=[
- {ind:"Manufacturing",story:"From the Shop Floor to the Boardroom",org:"Quality & margin",
-  prob:"A 2am line-down runs blind for three shifts, and the margin hit stays invisible until finance closes the books.",
-  src:"MES · PLC/SCADA · SAP ERP · QMS",key:"Batch ID",rot:[0,0],
-  demo:{len:"5 min",steps:[
-   ["Lakebase","An inspector logs a defect on batch B-2291, written in under 10 ms."],
-   ["Genie","The plant controller asks which SKUs lost margin last week, and why. The answer traces to scrap on Line 3."],
-   ["App","The planner sees the Line 3 filler at high failure risk, with the cost of inaction, and schedules the fix."],
-   ["Loop","The same batch ID links the defect, the margin loss and the work order."]]},
-  cells:[
-  {t:"Cost-to-produce & margin insights",p:"Margin impact is invisible until the month-end finance rollup.",v:"The plant controller asks which SKUs lost margin last week, and why, and gets an answer from real production data in minutes.",who:"Plant Controller",stack:["Genie space","Metric views","Unity Catalog"]},
-  {t:"Quality & batch traceability store",p:"Batch, defect and genealogy records sit on shop-floor systems, out of reach for hours.",v:"Every batch, defect code and genealogy record is written in real time (sub-10 ms) and governed with the lakehouse.",who:"Quality Inspector, QA Manager",stack:["Lakebase Postgres","Synced tables","Unity Catalog"]},
-  {t:"Predictive maintenance planner",p:"Maintenance reacts after the line has already gone down.",v:"Shows which machine will fail, by when, and the cost of inaction, so the planner acts before the next 2am outage.",who:"Maintenance Planner",stack:["Databricks Apps","Model Serving","Lakebase"]}]},
- {ind:"Retail & FMCG",story:"Promo Pulse",org:"NovaMart · 320 stores",
-  prob:"Day 3 of the Festive Snack Fest: 18 stores run out of the hero SKU while 11 nearby stores hold 3+ weeks of cover.",
-  src:"MySQL ERP & POS via Lakeflow Connect (managed CDC)",key:"SKU × store",rot:[0,-90],
-  demo:{len:"5 min",steps:[
-   ["Alert","07:00: the dashboard flags 18 stores at risk on Masala Crunch 200g."],
-   ["Genie","07:05: Meera asks why, and where the surplus stock sits."],
-   ["App","07:15: the app proposes 6 transfers, and Ravi approves them."],
-   ["Lakebase","07:16: approvals land in Lakebase and store teams get the task. The forecast updates on the next run."]]},
-  cells:[
-  {t:"Category & promotion performance Q&A",p:"Sell-through, uplift and days of cover mean different things per team, so every question becomes an analyst ticket.",v:"Meera asks which stores will run out before the offer ends and where to pull stock from, and gets one governed answer.",who:"Meera, Category Manager",stack:["Genie space","Retail ontology","Unity Catalog"]},
-  {t:"Real-time inventory & transfer store",p:"Store actions live in operational apps, cut off from sales and promotion data.",v:"Live stock, transfer requests and promo overrides are served to the app, and approvals are written back instantly.",who:"Store Operations",stack:["Lakebase Postgres","Synced forecasts","Unity Catalog"]},
-  {t:"Promo Pulse command centre",p:"Moving stock means emails and phone calls, and nothing is tracked or learned from.",v:"Recommends transfers from stockout-risk scores. Ravi approves them in the app: 16 minutes from alert to action.",who:"Ravi, Store Ops · Anita, Regional Head",stack:["Databricks Apps","MLflow models","AI/BI dashboard"]}]},
- {ind:"Energy & Utilities",story:"Smart-Meter Revenue Protection",org:"Northbridge Power & Light · 1.6 M smart meters",
-  prob:"A meter tamper takes about 60 days to find, inspect and penalise, and AT&C loss is stuck at 17.8% against a 13% target.",
-  src:"HES (DLMS) via Kafka & Auto Loader · MDM · SAP IS-U · GIS",key:"Meter ID",rot:[-90,0],
-  demo:{len:"5 min",steps:[
-   ["Ingest","A magnet tamper alarm streams in from the HES in under a minute."],
-   ["Genie","James finds transformer EG-7714 at 31% loss, and Harborview Cold Storage as the cause."],
-   ["App","Tom inspects, records photo and GPS, and the penalty is approved on screen."],
-   ["Lakebase","Emma sees the full case in under a second. Sarah sees approved vs collected."]]},
-  cells:[
-  {t:"Loss & recovery insights",p:"Every loss question waits on an analyst stitching meter, billing and GIS data in Excel.",v:"James finds transformer EG-7714 at 31% loss and the tampering consumer in three questions, on a CIM-aligned ontology.",who:"James Carter, Division Engineer",stack:["Genie space","Metric views","Unity Catalog"]},
-  {t:"Inspection & recovery store",p:"Inspection outcomes sit on paper, so customer care can't see them.",v:"Inspections, approvals and payment plans are written in milliseconds. Customer care sees the full case in under a second.",who:"Emma Hughes, Customer Care",stack:["Lakebase Postgres","Synced tables","Unity Catalog"]},
-  {t:"Revenue Protection Command",p:"Inspectors get an unranked list of 40 names and visit in random order.",v:"Routes ranked by revenue at risk. Tom records the tamper with photo and GPS, and the penalty is approved on screen.",who:"Tom Reynolds, Field Inspector",stack:["Databricks Apps","Model Serving","Lakebase"]}]}
-];
+  const TECH = {
+    genie:    { name: "AI/BI Genie",      tagline: "Ask questions of governed data in plain language" },
+    agents:   { name: "Agent Bricks",     tagline: "Build, evaluate and run production AI agents" },
+    lakebase: { name: "Lakebase",         tagline: "Managed Postgres for real-time apps on the lakehouse" },
+    apps:     { name: "Databricks Apps",  tagline: "Ship secure data and AI apps inside the platform" },
+    uc:       { name: "Unity Catalog",    tagline: "One governance layer for data, models and agents" },
+    lakeflow: { name: "Lakeflow",         tagline: "Ingest and transform data with managed pipelines" }
+  };
 
+  // The four DIS MEA 2026 stages. Each use case is tagged with the stage it belongs to.
+  const STAGES = {
+    ai_gov:    "AI Strategy & Governance",
+    data_gov:  "Data Strategy & Governance",
+    analytics: "Analytics & Decision Intelligence",
+    agentic:   "ML, Gen & Agentic AI"
+  };
+
+  // 24×24 line icons, drawn with currentColor.
+  const ICONS = {
+    banking:    '<path d="M3 10h18L12 4 3 10Z"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>',
+    government: '<path d="M4 20h16M6 20v-7M10 20v-7M14 20v-7M18 20v-7M4 13h16"/><path d="M6 13a6 6 0 0 1 12 0"/><path d="M12 7V3"/>',
+    energy:     '<path d="M13 2 5 14h6l-1 8 8-12h-6l1-8Z"/>',
+    realestate: '<path d="M4 21V9l5-3v15M9 21V4l6 3v14M15 21v-9l5 2v7M3 21h18"/>',
+    retail:     '<path d="M5 8h14l-1.2 12.1a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+    healthcare: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"/><path d="M12 9v5M9.5 11.5h5"/>'
+  };
+
+  const ROWS = [
+    {
+      id: "banking",
+      name: "Banking & Fintech",
+      company: "Gulf Crescent Bank",
+      city: "Dubai",
+      headline: "Explainable credit decisions, answered in minutes",
+      storyline:
+        "The central bank wants every credit model traced back to the data it learned from. " +
+        "Meanwhile, relationship managers wait days for portfolio reports that analysts build by hand.",
+      useCases: [
+        { tech: "uc", stage: "ai_gov",
+          title: "Every model traced to its data",
+          outcome: "Lineage, access policies and model versions sit in one catalog, so the audit pack is generated instead of assembled.",
+          metric: "Audit pack in 2 days instead of 6 weeks" },
+        { tech: "genie", stage: "analytics",
+          title: "Relationship managers ask, Genie answers",
+          outcome: "RMs ask about exposure, churn risk or product mix and get answers from certified tables only.",
+          metric: "70% fewer ad-hoc report requests" },
+        { tech: "agents", stage: "agentic",
+          title: "A fraud triage agent for the night shift",
+          outcome: "An agent groups alerts, pulls customer context and drafts a case summary for the analyst to approve.",
+          metric: "Alert handling time cut by half" }
+      ],
+      demo: [
+        "Open the credit risk catalog and follow one model back to its source tables.",
+        "Ask Genie which segments drove last quarter's rise in early arrears.",
+        "Hand three overnight fraud alerts to the triage agent and review its case notes.",
+        "Approve one case and watch the decision land in the audit log."
+      ]
+    },
+    {
+      id: "government",
+      name: "Government & Smart Cities",
+      company: "Emirate Digital Services Authority",
+      city: "Abu Dhabi",
+      headline: "One view of the citizen across forty entities",
+      storyline:
+        "Forty government entities each hold part of the citizen's story, and none can see the rest. " +
+        "Policy teams want answers that need data from five of them at once, without moving it around.",
+      useCases: [
+        { tech: "uc", stage: "data_gov",
+          title: "Share data without copying it",
+          outcome: "Entities publish governed data products and grant access by purpose, with row and column rules enforced centrally.",
+          metric: "New data-sharing request live in 3 days, not 3 months" },
+        { tech: "genie", stage: "analytics",
+          title: "Policy questions in plain language",
+          outcome: "Analysts ask how a housing programme affects school enrolment and get a governed answer with the query behind it.",
+          metric: "Policy briefs drafted 4× faster" },
+        { tech: "apps", stage: "agentic",
+          title: "A citizen services assistant",
+          outcome: "An app on the platform answers service questions from approved knowledge and hands complex cases to a person.",
+          metric: "35% of service queries resolved first time" }
+      ],
+      demo: [
+        "Browse the cross-entity data marketplace and request access to a housing dataset.",
+        "See the access policy apply: personal identifiers masked for your role.",
+        "Ask Genie how enrolment changed in districts with new housing.",
+        "Try the citizen assistant and hand a complex case over to an agent."
+      ]
+    },
+    {
+      id: "energy",
+      name: "Energy & Utilities",
+      company: "Sahara Grid Utilities",
+      city: "Riyadh",
+      headline: "From smart-meter noise to outages prevented",
+      storyline:
+        "Two million smart meters and a fast-growing solar fleet send data every fifteen minutes. " +
+        "Field teams still learn about faults from customer calls.",
+      useCases: [
+        { tech: "lakeflow", stage: "data_gov",
+          title: "Meter and SCADA data in one pipeline",
+          outcome: "Streaming pipelines land meter reads, weather and grid telemetry in governed tables within minutes.",
+          metric: "Data freshness from next-day to 5 minutes" },
+        { tech: "lakebase", stage: "analytics",
+          title: "A live outage board for control rooms",
+          outcome: "Operational data in Lakebase powers a real-time board that shows likely faults before customers call.",
+          metric: "Outage detection 40 minutes earlier" },
+        { tech: "agents", stage: "agentic",
+          title: "A maintenance planning agent",
+          outcome: "An agent ranks transformers by failure risk, checks crew availability and proposes the week's work orders.",
+          metric: "18% fewer unplanned outages" }
+      ],
+      demo: [
+        "Watch meter readings stream into a governed table in real time.",
+        "Open the outage board and spot a feeder showing early warning signs.",
+        "Ask the maintenance agent to plan next week's crew schedule around it.",
+        "Approve the plan and see work orders created for the field team."
+      ]
+    },
+    {
+      id: "realestate",
+      name: "Real Estate & Hospitality",
+      company: "Marina Heights Developments",
+      city: "Dubai",
+      headline: "Know which buyers are serious before the launch",
+      storyline:
+        "Off-plan launches sell out in hours, but leads arrive from portals, brokers and walk-ins in different formats. " +
+        "Sales teams cannot tell which enquiries will convert, and pricing reviews take weeks.",
+      useCases: [
+        { tech: "uc", stage: "ai_gov",
+          title: "Responsible pricing and lead models",
+          outcome: "Pricing and lead-scoring models are registered with owners, approvals and monitored drift.",
+          metric: "Every model reviewed before each launch" },
+        { tech: "genie", stage: "analytics",
+          title: "Sales leaders ask about the pipeline",
+          outcome: "Leaders ask which units, nationalities and channels are converting this week and get answers with sources.",
+          metric: "Weekly sales review prep from 2 days to 1 hour" },
+        { tech: "apps", stage: "agentic",
+          title: "A broker assistant app",
+          outcome: "Brokers get a ranked lead list, unit availability from Lakebase and a drafted follow-up message.",
+          metric: "Lead-to-viewing conversion up 22%" }
+      ],
+      demo: [
+        "Open the model registry and check the approval trail for the pricing model.",
+        "Ask Genie which channels brought the highest-value buyers last launch.",
+        "Open the broker app and pick the top lead for a two-bedroom unit.",
+        "Send the drafted follow-up and see the unit held in real time."
+      ]
+    },
+    {
+      id: "retail",
+      name: "Retail & FMCG",
+      company: "Oasis Retail Group",
+      city: "Riyadh and Jeddah",
+      headline: "Stock that keeps up with Ramadan and summer peaks",
+      storyline:
+        "Demand swings sharply around Ramadan, Eid and the summer season. " +
+        "Store managers order from instinct, and promotions are planned in spreadsheets that never match the sales data.",
+      useCases: [
+        { tech: "lakeflow", stage: "data_gov",
+          title: "A single, trusted sales and stock table",
+          outcome: "Point-of-sale, e-commerce and supplier feeds are cleaned into one set of certified tables.",
+          metric: "One version of sales across 300 stores" },
+        { tech: "genie", stage: "analytics",
+          title: "Store managers ask before they order",
+          outcome: "Managers ask what sold last Ramadan and what is forecast this week, in plain language on a tablet.",
+          metric: "Out-of-stocks down 15% in peak weeks" },
+        { tech: "agents", stage: "agentic",
+          title: "A promotion planning agent",
+          outcome: "An agent proposes promotions, checks margin and stock, and explains why each one should work.",
+          metric: "Promotion margin up 3 points" }
+      ],
+      demo: [
+        "See last year's Ramadan demand curve next to this year's forecast.",
+        "Ask Genie which categories ran out early in Jeddah stores.",
+        "Ask the promotion agent for an Eid plan within a fixed margin.",
+        "Review its reasoning and accept two of the three proposals."
+      ]
+    },
+    {
+      id: "healthcare",
+      name: "Healthcare & Life Sciences",
+      company: "Nile Care Hospitals",
+      city: "Cairo",
+      headline: "Shorter waits without compromising patient privacy",
+      storyline:
+        "Emergency waits are rising and beds are hard to plan. " +
+        "Clinicians want help with paperwork, but every use of patient data has to respect consent and privacy rules.",
+      useCases: [
+        { tech: "uc", stage: "data_gov",
+          title: "Patient data protected by default",
+          outcome: "Identifiers are masked by role, consent is enforced in policy, and every access is logged.",
+          metric: "100% of patient-data access audited" },
+        { tech: "lakebase", stage: "analytics",
+          title: "A live bed and patient-flow view",
+          outcome: "Admissions, discharges and theatre schedules feed a live view that predicts bed pressure for the next 12 hours.",
+          metric: "Emergency waits down 20 minutes" },
+        { tech: "agents", stage: "ai_gov",
+          title: "Discharge summaries with a clinician in the loop",
+          outcome: "An agent drafts discharge summaries from notes, and a clinician reviews and signs every one.",
+          metric: "45 minutes saved per doctor per shift" }
+      ],
+      demo: [
+        "Query patient data as a researcher and see identifiers masked automatically.",
+        "Open the patient-flow view and spot the ward that will fill first.",
+        "Ask the agent to draft a discharge summary for a sample patient.",
+        "Edit and sign it as the clinician, and see the review recorded."
+      ]
+    }
+  ];
+
+  return { EVENT, TECH, STAGES, ICONS, ROWS };
+})();

@@ -1,58 +1,246 @@
-/* Cube, reveal and unattended (attract) mode logic. Content lives in storylines.js. */
+/*
+ * dbt_dis behaviour: cube rotation, reveal, attract mode and the event countdown.
+ * Content comes from js/storylines.js (window.DIS).
+ */
+(function () {
+  "use strict";
 
-const $=id=>document.getElementById(id);
-ROWS.forEach((r,i)=>{
-  $('face'+i).innerHTML=ICONS[i]+`<div class="fn">${r.ind}</div><div class="fs">${r.story}</div>`;
-  const b=document.createElement('button');b.className='pickbtn';b.textContent=r.ind;
-  b.addEventListener('click',()=>{userAct();go(i)});$('actions').appendChild(b);
-});
-TECH.forEach((t,k)=>{$('c'+k).innerHTML=`<div class="tech">${t.logo}<b>${t.n}</b></div><p>${t.tag}. Roll the cube to see the use case.</p>`});
-function demoDefault(){
-  $('c3').innerHTML=`<div class="dk">Live demo</div><h4>See it running at our booth</h4>
-   <div class="ds">Each storyline is a working demo on Databricks, not slides.</div>
-   <ol>${ROWS.map(r=>`<li><span><em>${r.ind}</em>${r.story}</span></li>`).join('')}</ol>
-   <div class="foot"><span>Ask the Diggibyte team for a walkthrough</span><b>About 5 min each</b></div>`;
-}
-demoDefault();
+  const { EVENT, TECH, STAGES, ICONS, ROWS } = window.DIS;
 
-const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-let ax=0,ay=-180,cur=-1,busy=false;
-const cube=$('cube');cube.style.transform=`rotateX(${ax}deg) rotateY(${ay}deg)`;
-const next=(now,t,s)=>t+360*Math.ceil((now+s*360-t)/360);
-function go(i){
-  if(busy)return;busy=true;$('roll').disabled=true;
-  [0,1,2,3].forEach(k=>$('c'+k).classList.add('out'));
-  const s=reduce?0:2;ax=next(ax,ROWS[i].rot[0],s);ay=next(ay,ROWS[i].rot[1],s+1);
-  cube.style.transform=`rotateX(${ax}deg) rotateY(${ay}deg)`;
-  setTimeout(()=>reveal(i),reduce?200:1650);
-}
-function reveal(i){
-  cur=i;const r=ROWS[i];
-  $('kicker').textContent=r.ind;$('title').textContent=r.story;$('org').textContent=r.org;$('prob').textContent=r.prob;
-  $('facts').innerHTML=`<dt>Sources</dt><dd>${r.src}</dd><dt>Shared record</dt><dd><b>${r.key}</b> links all three use cases</dd>`;
-  $('uchead').textContent=`${r.story}: use cases & live demo`;$('ucsub').textContent=r.ind;
-  document.querySelectorAll('.pickbtn').forEach((b,k)=>b.setAttribute('aria-current',k===i));
-  r.cells.forEach((c,k)=>{
-    const el=$('c'+k);el.className='card out';
-    el.innerHTML=`<div class="tech">${TECH[k].logo}<b>${TECH[k].n}</b></div><div class="tag">${TECH[k].tag}</div>
-      <h4>${c.t}</h4>
-      <dl class="row"><dt>Problem</dt><dd>${c.p}</dd></dl>
-      <dl class="row"><dt>Outcome</dt><dd>${c.v}</dd></dl>
-      <div class="meta"><div class="stack">${c.stack.map(s=>`<span>${s}</span>`).join('')}</div><div class="who">${c.who}</div></div>`;
-    setTimeout(()=>el.classList.remove('out'),reduce?0:100+k*150);
-  });
-  const d=$('c3');d.className='card demo out';
-  d.innerHTML=`<div class="dk">Live demo · ${r.demo.len}</div><h4>${r.story}</h4><div class="ds">${r.org}</div>
-    <ol>${r.demo.steps.map(s=>`<li><span><em>${s[0]}</em>${s[1]}</span></li>`).join('')}</ol>
-    <div class="foot"><span>Shared record: <b>${r.key}</b></span><span>Ask us to run it live</span></div>`;
-  setTimeout(()=>d.classList.remove('out'),reduce?0:550);
-  setTimeout(()=>{busy=false;$('roll').disabled=false},reduce?0:750);
-}
-function roll(){let i;do{i=Math.floor(Math.random()*3)}while(i===cur);go(i)}
-$('roll').addEventListener('click',()=>{userAct();roll()});
-document.addEventListener('keydown',e=>{if(e.code==='Space'&&e.target===document.body){e.preventDefault();userAct();roll()}});
+  // Attract mode: roll on its own after IDLE_MS without interaction, then every AUTO_MS.
+  const IDLE_MS = 40000;
+  const AUTO_MS = 20000;
 
-// unattended mode: after 40s idle, roll every 20s until a visitor interacts
-let idle,attract;
-function userAct(){clearInterval(attract);attract=null;clearTimeout(idle);idle=setTimeout(()=>{attract=setInterval(roll,20000);roll()},40000)}
-userAct();
+  // Face order matches ROWS order. Each entry is the cube rotation [x, y] that shows that face.
+  const FACES = [
+    { cls: "front",  rot: [0, 0] },
+    { cls: "right",  rot: [0, -90] },
+    { cls: "back",   rot: [0, 180] },
+    { cls: "left",   rot: [0, 90] },
+    { cls: "top",    rot: [-90, 0] },
+    { cls: "bottom", rot: [90, 0] }
+  ];
+  const TILT = [-18, 28]; // resting tilt so three faces are visible
+
+  const $ = (id) => document.getElementById(id);
+  const cube = $("cube");
+  const rollBtn = $("roll");
+  const chipsEl = $("chips");
+  const story = $("story");
+
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  let current = -1;
+  let rx = TILT[0];
+  let ry = TILT[1];
+  let rolling = false;
+  let idleTimer = null;
+  let autoTimer = null;
+
+  const svg = (name) =>
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
+
+  const escapeHtml = (s) =>
+    String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  /* ---------- Build ---------- */
+
+  function fillEventText() {
+    document.querySelectorAll("[data-event]").forEach((el) => {
+      const key = el.getAttribute("data-event");
+      if (EVENT[key]) el.textContent = EVENT[key];
+    });
+  }
+
+  function buildCube() {
+    cube.innerHTML = ROWS.slice(0, FACES.length).map((row, i) =>
+      '<div class="face face-' + FACES[i].cls + '">' + svg(row.id) +
+      "<span>" + escapeHtml(row.name) + "</span></div>"
+    ).join("");
+  }
+
+  function buildChips() {
+    chipsEl.innerHTML = ROWS.map((row, i) =>
+      '<button type="button" class="chip" data-index="' + i + '" aria-pressed="false">' +
+      svg(row.id) + escapeHtml(row.name) + "</button>"
+    ).join("");
+    chipsEl.addEventListener("click", (e) => {
+      const btn = e.target.closest(".chip");
+      if (!btn) return;
+      userAct();
+      rollTo(Number(btn.dataset.index), 1);
+    });
+  }
+
+  /* ---------- Cube ---------- */
+
+  function setTransform() {
+    cube.style.transform = "rotateX(" + rx + "deg) rotateY(" + ry + "deg)";
+  }
+
+  // Land on face idx after `spins` extra full turns, always turning forward.
+  function rollTo(idx, spins) {
+    if (rolling || idx < 0 || idx >= ROWS.length) return;
+    if (idx === current && spins === 0) return;
+    rolling = true;
+    rollBtn.disabled = true;
+
+    const [fx, fy] = FACES[idx].rot;
+    const tx = fx + TILT[0] * (fx === 0 ? 1 : 0.4);
+    const ty = fy + TILT[1] * (fx === 0 ? 1 : 0.4);
+    const turnsX = Math.ceil((rx - tx) / 360) + spins;
+    const turnsY = Math.ceil((ry - ty) / 360) + spins;
+    rx = tx + 360 * turnsX; // >= current angle, so the cube always turns forward
+    ry = ty + 360 * turnsY;
+    setTransform();
+
+    const done = () => {
+      cube.removeEventListener("transitionend", done);
+      clearTimeout(fallback);
+      rolling = false;
+      rollBtn.disabled = false;
+      reveal(idx);
+    };
+    const ms = reducedMotion.matches ? 10 : 1700;
+    const fallback = setTimeout(done, ms);
+    cube.addEventListener("transitionend", done);
+  }
+
+  function roll() {
+    let next = Math.floor(Math.random() * ROWS.length);
+    if (next === current) next = (next + 1 + Math.floor(Math.random() * (ROWS.length - 1))) % ROWS.length;
+    rollTo(next, 2);
+  }
+
+  /* ---------- Reveal ---------- */
+
+  function reveal(idx) {
+    const row = ROWS[idx];
+    current = idx;
+
+    $("story-where").textContent = row.company + ", " + row.city;
+    $("story-title").textContent = row.headline;
+    $("story-text").textContent = row.storyline;
+
+    $("cases").innerHTML = row.useCases.map((uc) => {
+      const tech = TECH[uc.tech] || { name: uc.tech, tagline: "" };
+      return (
+        '<article class="case">' +
+        '<p class="case-tech">' + escapeHtml(tech.name) + "</p>" +
+        '<p class="case-tagline">' + escapeHtml(tech.tagline) + "</p>" +
+        "<h3>" + escapeHtml(uc.title) + "</h3>" +
+        '<p class="case-outcome">' + escapeHtml(uc.outcome) + "</p>" +
+        '<p class="case-metric">' + escapeHtml(uc.metric) + "</p>" +
+        '<span class="case-stage">' + escapeHtml(STAGES[uc.stage] || "") + " stage</span>" +
+        "</article>"
+      );
+    }).join("");
+
+    $("demo-steps").innerHTML = row.demo.map((s) => "<li>" + escapeHtml(s) + "</li>").join("");
+
+    chipsEl.querySelectorAll(".chip").forEach((c, i) =>
+      c.setAttribute("aria-pressed", i === idx ? "true" : "false")
+    );
+
+    story.classList.remove("is-revealing");
+    void story.offsetWidth; // restart the reveal animation
+    story.classList.add("is-revealing");
+
+    try { history.replaceState(null, "", "#" + row.id); } catch (e) { /* file:// or sandboxed */ }
+  }
+
+  /* ---------- Attract mode ---------- */
+
+  function userAct() {
+    clearTimeout(idleTimer);
+    clearInterval(autoTimer);
+    idleTimer = setTimeout(() => {
+      roll();
+      autoTimer = setInterval(roll, AUTO_MS);
+    }, IDLE_MS);
+  }
+
+  /* ---------- Countdown ---------- */
+
+  function startCountdown() {
+    const box = document.querySelector(".countdown");
+    const label = $("countdown-label");
+    const units = {
+      d: box.querySelector('[data-unit="d"]'),
+      h: box.querySelector('[data-unit="h"]'),
+      m: box.querySelector('[data-unit="m"]'),
+      s: box.querySelector('[data-unit="s"]')
+    };
+    const start = Date.parse(EVENT.start);
+    const end = Date.parse(EVENT.end);
+    const pad = (n) => String(n).padStart(2, "0");
+    let state = "";
+
+    function tick() {
+      const now = Date.now();
+      let next;
+      if (now < start) next = "soon";
+      else if (now < end) next = "live";
+      else next = "over";
+
+      if (next !== state) {
+        state = next;
+        box.classList.toggle("is-live", state === "live");
+        box.classList.toggle("is-over", state === "over");
+        label.textContent =
+          state === "soon" ? "Summit starts in" :
+          state === "live" ? "The summit is live. Come and roll the cube at our booth." :
+          "Thanks for visiting us at Data Innovation Summit MEA 2026.";
+      }
+      if (state === "soon") {
+        let t = Math.floor((start - now) / 1000);
+        const d = Math.floor(t / 86400); t -= d * 86400;
+        const h = Math.floor(t / 3600);  t -= h * 3600;
+        const m = Math.floor(t / 60);    t -= m * 60;
+        units.d.textContent = pad(d);
+        units.h.textContent = pad(h);
+        units.m.textContent = pad(m);
+        units.s.textContent = pad(t);
+      }
+    }
+    tick();
+    setInterval(tick, 1000);
+  }
+
+  /* ---------- Start ---------- */
+
+  function init() {
+    fillEventText();
+    buildCube();
+    buildChips();
+
+    rollBtn.addEventListener("click", () => { userAct(); roll(); });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.code !== "Space" || e.repeat) return;
+      const tag = (e.target.tagName || "").toLowerCase();
+      if (tag === "button" || tag === "input" || tag === "textarea") return; // let buttons handle Space
+      e.preventDefault();
+      userAct();
+      roll();
+    });
+    ["pointerdown", "wheel", "touchstart"].forEach((ev) =>
+      document.addEventListener(ev, userAct, { passive: true })
+    );
+
+    // Open on the industry in the URL hash, or the first one.
+    const fromHash = ROWS.findIndex((r) => "#" + r.id === location.hash);
+    const first = fromHash >= 0 ? fromHash : 0;
+    const [fx, fy] = FACES[first].rot;
+    rx = fx + TILT[0] * (fx === 0 ? 1 : 0.4);
+    ry = fy + TILT[1] * (fx === 0 ? 1 : 0.4);
+    setTransform();
+    reveal(first);
+    story.classList.remove("is-revealing");
+
+    startCountdown();
+    userAct();
+  }
+
+  init();
+})();
